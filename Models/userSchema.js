@@ -1,21 +1,20 @@
 const mongoose = require('mongoose');
 
 const user = new mongoose.Schema({
-    userID: {
-        type: String,
-        required: true,
-        unique: true
-    },
     name: {
         type: String,
         required: true
     },
-    emailID: {
+    lastName:{
+        type: String,
+        required: isIndividual,
+    },
+    email: {
         type: String,
         required: true,
         unique: true
     },
-    contactNumber: {
+    phoneNo: {
         type: Number,
         required: true,
         unique: true
@@ -23,6 +22,10 @@ const user = new mongoose.Schema({
     // DOB / DOE
     date: {
         type: Date,
+        required: true
+    },
+    state:{
+        type: String,
         required: true
     },
     userType: {
@@ -38,5 +41,26 @@ const user = new mongoose.Schema({
     },
     bankDetails: {
         type: Object
+    },
+
+    verified:{
+      type: Boolean,
+    },
+
+    password: {
+        type: String,
+        required: true
     }
+
+
 })
+
+function isIndividual (){
+    if(this.userType === 'Individual'){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+module.exports = mongoose.model('user', user);
