@@ -9,13 +9,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const MONGODB_URI = process.env.MONGO_URI;
 
 mongoose.connect(
-    MONGODB_URI
+    process.env.MONGO_URI,
 )
 .then(result => {
-    const port = process.env.PORT || 3000;
+    const port = 3000;
     app.listen(port, () => {
         console.log('Server Started at port '+ port)
     })
