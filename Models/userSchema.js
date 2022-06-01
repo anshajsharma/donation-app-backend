@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const user = new mongoose.Schema({
     name: {
@@ -42,17 +44,19 @@ const user = new mongoose.Schema({
     bankDetails: {
         type: Object
     },
-
     verified:{
       type: Boolean,
     },
-
     password: {
         type: String,
         required: true
     }
+})
 
-
+user.pre('save', async function (){
+    let hashedString = await bcrypt.hash(this.password, saltRounds);
+    console.log(hashedString);
+    this.password = hashedString;
 })
 
 function isIndividual (){
