@@ -28,13 +28,19 @@ app.get('/', (req, res) => {
 })
 
 // Auth
-const {signUp,login} = require('./controllers/AuthControllers')
+const {signUp, login, emailSend, changePassword} = require('./controllers/AuthControllers')
 
 //SignUp
 app.post('/signup',signUp);
 
 //Login
 app.post('/login',login);
+
+//Send OTP Page
+app.post('/email-send', emailSend)
+
+//Change Password Page
+app.put('/change-password', changePassword)
 
 // Message
 const {sendmessage} = require('./controllers/messageController')
