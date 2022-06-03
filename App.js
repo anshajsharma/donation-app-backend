@@ -40,7 +40,7 @@ app.post('/login',login);
 app.post('/email-send', emailSend)
 
 //Change Password Page
-app.put('/change-password', changePassword)
+app.put('/changepassword', changePassword)
 
 // Message
 const {sendmessage} = require('./controllers/messageController')
