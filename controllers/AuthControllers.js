@@ -45,13 +45,13 @@ exports.signUp = async (req,res) => {
         // {
             newUser.save()
                 .then((doc)=>{
-                    res.status(200).send({msg: "Account Successfully Created !"})
+                    res.status(200).send({msg: "Account Successfully Created! Sucess"})
                 })
                 .catch((err)=>{
                     if(err.message.includes("email")){
-                        res.status(200).send({msg: "Error: Email already registered !", errMsg: err.message})
+                        res.status(200).send({msg: "Email already registered !", errMsg: err.message})
                     }else if(err.message.includes("phoneNo")){
-                        res.status(200).send({msg: "Error: Phone Number already registered !", errMsg: err.message})
+                        res.status(200).send({msg: "Phone Number already registered !", errMsg: err.message})
                     }
                 })
         // }
@@ -63,15 +63,13 @@ exports.signUp = async (req,res) => {
     }
     else{
         res.send({
-            message: "Invalid Email ID",
-            reason: validators[reason].reason
+            msg: "Invalid Email ID",
+            errMsg: validators[reason].reason
         });
     }
 }
 
 exports.login = async (req,res) => {
-    const {valid, reason, validators} = await isEmailValid(req.body.email);
-    if(valid){
         User.findOne({email: req.body.email}, (err,doc)=>{
             if(err){
                 res.status(200).send({msg: "Login failed !", errMsg: err.message})
@@ -79,89 +77,75 @@ exports.login = async (req,res) => {
                 if(doc){
                     bcrypt.compare(req.body.password, doc.password, function(err, isMatch) {
                         if (!isMatch) {
-                            res.status(200).send({msg: "Login failed !", errMsg: "Invalid password"})
+                            res.status(200).send({msg: "Password not matched !"})
                         } else {
                             if(doc.userType === req.body.userType){
                                 const token = jwt.sign({_id: doc._id}, process.env.SECRET_KEY);
-                                res.status(200).send({msg: "Successfully Logged In !", token: token})
+                                res.status(200).send({msg: "Login successful...... Sucess", token: token})
                             }else{
-                                res.status(200).send({msg: "Login failed !", errMsg: "No matching profile found"})
+                                res.status(200).send({msg: "Invalid User Type"})
                             }
                         }   
                     })
                 }else{
-                    res.status(200).send({msg: "Login failed !", errMsg: "User not found !"})
+                    res.status(200).send({msg: "Email not registered"})
                 }   
             }
         })
-    }
-    else{
-        res.send({
-            message: "Invalid Email ID",
-            reason: validators[reason].reason
-        });
-    }
+    
 }
 
 exports.emailSend = async (req,res) => {
-    const {valid, reason, validators} = await isEmailValid(req.body.email);
-    if(valid){
-        OTP.findOne({email: req.body.email},(err,doc)=>{
-            if(err){
-                res.send({msg: "Failed !", errMsg: err.message})
-            }else{
-                if(doc){
-                    OTP.deleteMany({email: doc.email}, (err,obj)=>{
-                        if(err){
-                            console.log(err);
-                        }
-                    });
-                }
+
+    OTP.findOne({email: req.body.email},(err,doc)=>{
+        if(err){
+            res.send({msg: "Failed !", errMsg: err.message})
+        }else{
+            if(doc){
+                OTP.deleteMany({email: doc.email}, (err,obj)=>{
+                    if(err){
+                        console.log(err);
+                    }
+                });
             }
-        })
-        User.findOne({email: req.body.email},(err,doc)=>{
-            if(err){
-                res.send({msg: "Failed !", errMsg: err.message})
-            }else{
-                if(doc){
-                    let otpCode = Math.floor(1000 + Math.random() * 9000);
-                    let otpData = new OTP({
-                        email: req.body.email,
-                        OTP: otpCode,
-                        expireIn: new Date().getTime()// + 300*1000
+        }
+    })
+
+    User.findOne({email: req.body.email}, (err,doc)=>{
+        if(err){
+            res.send({msg: "Failed !", errMsg: err.message})
+        }else{
+            if(doc){
+                let otp =  Math.floor(1000 + Math.random() * 9000);
+                let newOTP = new OTP({
+                    createdAt: new Date(),
+                    email: doc.email,
+                    OTP: otp
+                });
+                newOTP.save()
+                    .then((doc)=>{
+                        mailer(doc.email, otp);
+                        res.send({msg: "OTP sent to your email ! Sucess"})
                     })
-                    otpData.save()
-                        .then((doc)=>{
-                            mailer(req.body.email, otpCode);
-                            res.send({msg: "OTP sent successfully. Check Your Mailbox."})
-                        })
-                        .catch((err)=>{
-                            res.status(200).send({msg: "Failed !", errMsg: err.message})
-                })
-                }else{
-                    res.send({msg: "Email not registered !"})
-                }
+                    .catch((err)=>{
+                        res.send({msg: "OTP sending failed !", errMsg: err.message})
+                    })
+            }else{
+                res.send({msg: "Email not registered"})
             }
-        })
-    }
-    else{
-        res.send({
-            message: "Invalid Email ID",
-            reason: validators[reason].reason
-        });
-    }
+        }
+    })
+    
 }
+        
 
 exports.changePassword = async (req,res) => {
-    const {valid, reason, validators} = await isEmailValid(req.body.email);
-    if(valid){
-        let data = await OTP.findOne({email: req.body.email, OTP: req.body.OTP});
+
+        let data = await OTP.findOne({email: req.body.email});
         if(data){
-            let currentTime = new Date().getTime();
-            let diff = data.expireIn - currentTime;
-            if(diff <= 0){
-                res.json({msg: "OTP Expired !"});
-            }else{
+            // console.log(data);
+            if(data.OTP === req.body.OTP)
+            {
                 let salt = await bcrypt.genSalt();
                 let hashedString = await bcrypt.hash(req.body.password, salt);
                 User.updateOne({email: req.body.email}, {$set: {password: hashedString}},(err,doc)=>{
@@ -169,22 +153,17 @@ exports.changePassword = async (req,res) => {
                         res.send({msg: "Password Updation Failed !.", errMsg: err.message})
                     
                     }else{
-                        res.send({msg: "Password Updated !"})
+                        res.send({msg: "Password Updated ! Sucess"})
                     }
-                })
+                 })
+                
             }
-            OTP.deleteMany({email: data.email}, (err,obj)=>{
-                if(err){
-                    console.log(err);
-                }
-            })
-        }else{
-            res.json({msg: "Invalid OTP"});
+            else
+            {
+                res.send({msg: "OTP not matched !"});
+            }
         }
-    }else{
-        res.send({
-            message: "Invalid Email ID",
-            reason: validators[reason].reason
-        });
-    }
+        else{
+            res.send({msg: "OTP expired !"});
+        }
 }
